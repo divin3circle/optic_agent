@@ -55,9 +55,6 @@ actor OpticAgent {
   // Store our positions
   var positions : [Position] = [];
 
-  // Local testing mode flag
-  let isLocalTesting = false;
-
   public shared({ caller = _ }) func deposit() : async () {
     // This function can receive ICP from any user
     // The ICP will be automatically credited to this canister's account
@@ -110,16 +107,6 @@ actor OpticAgent {
   };
 
   public shared func getBalances() : async Balances {
-    if (isLocalTesting) {
-      // Return mock data for local testing
-      return { 
-        icp = 10.5; 
-        ckUsdc = 150.25; 
-        ckBtc = 0.001; 
-        positions = 1000.0 
-      };
-    };
-
     let icpNat = await ledgerCanister.icrc1_balance_of(myAccount());
     let icp = Float.fromInt(icpNat) / 100_000_000.0;
     
@@ -149,18 +136,6 @@ actor OpticAgent {
   };
 
   public shared func runInvestmentCycle() : async InvestmentEvent {
-    if (isLocalTesting) {
-      // Return mock investment event for local testing
-      return {
-        swappedIcp = 5.0;
-        receivedCkUsdc = 75.0;
-        providedIcp = 5.0;
-        providedCkUsdc = 75.0;
-        mintedLp = 500.0;
-        timestamp = Time.now();
-      };
-    };
-
     let icpNat = await ledgerCanister.icrc1_balance_of(myAccount());
     let half = icpNat / 2;
     
@@ -309,16 +284,6 @@ actor OpticAgent {
     ckBtc : { amount : Nat; display : Float }; 
     positions : Float 
   } {
-    if (isLocalTesting) {
-      // Return mock data for local testing
-      return {
-        icp = { amount = 1_050_000_000; display = 10.5 }; // 10.5 ICP
-        ckUsdc = { amount = 150_250_000; display = 150.25 }; // 150.25 USDC
-        ckBtc = { amount = 100_000; display = 0.001 }; // 0.001 BTC
-        positions = 1000.0
-      };
-    };
-
     let icpNat = await ledgerCanister.icrc1_balance_of(myAccount());
     let ckUsdcNat = await ckUsdcLedger.icrc1_balance_of(myAccount());
     
