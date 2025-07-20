@@ -56,7 +56,7 @@ actor OpticAgent {
   var positions : [Position] = [];
 
   // Local testing mode flag
-  let isLocalTesting = false; // Set to true for local testing
+  let isLocalTesting = false;
 
   public shared({ caller = _ }) func deposit() : async () {
     // This function can receive ICP from any user
