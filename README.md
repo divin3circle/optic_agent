@@ -2,6 +2,14 @@
 
 An Internet Computer canister that automatically manages ICP investments through ICPSwap V3, including token swaps, liquidity provision, and position management.
 
+## 🎉 **Status: Fully Functional**
+
+✅ **ICPSwap V3 Integration Complete**  
+✅ **Real Token Amount Calculation Working**  
+✅ **Pool Metadata Integration Working**  
+✅ **Position Management Working**  
+✅ **Balance Tracking Working**
+
 ## Features
 
 ### ✅ **Multi-Token Support**
@@ -24,6 +32,7 @@ An Internet Computer canister that automatically manages ICP investments through
 - Proper two-step liquidity provision process
 - Position management via NFT-based positions
 - Fee collection and balance tracking
+- **Real token amount calculation** using SwapCalculator
 
 ### ✅ **Position Management**
 
@@ -31,6 +40,7 @@ An Internet Computer canister that automatically manages ICP investments through
 - Unique position IDs for each liquidity position
 - Fee collection from positions
 - Position transfer and management
+- **Accurate token amount calculation** for position values
 
 ## Architecture
 
@@ -109,9 +119,9 @@ type Balances = {
 }
 ```
 
-#### `getDetailedBalances()`
+#### `getDetailedBalances()` ✅ **WORKING**
 
-Get detailed balance information with raw amounts and display values.
+Get detailed balance information with raw amounts and display values. **Now calculates real token amounts in positions using ICPSwap's SwapCalculator.**
 
 ```motoko
 public shared func getDetailedBalances() : async {
@@ -121,6 +131,28 @@ public shared func getDetailedBalances() : async {
   positions : Float;
 }
 ```
+
+**Features:**
+
+- ✅ Real token amount calculation (not just liquidity numbers)
+- ✅ Proper decimal conversion (8 for ICP, 6 for ckUSDC)
+- ✅ USD value approximation for position reporting
+- ✅ Graceful error handling with fallback values
+
+#### `testMetadata()` ✅ **WORKING**
+
+Test function to verify pool metadata integration.
+
+```motoko
+public shared func testMetadata() : async Pool.MetadataResult
+```
+
+Returns pool metadata including:
+
+- Current tick: -27994
+- sqrtPriceX96: 19545085355429929225629290197
+- Liquidity: 4918348185919
+- Token information and pool configuration
 
 ### **Investment Functions**
 
@@ -206,7 +238,7 @@ system func heartbeat() : async ()
 
 ## Implementation Details
 
-### **ICPSwap V3 Integration**
+### **ICPSwap V3 Integration** ✅ **COMPLETE**
 
 #### **Token Standards**
 
@@ -222,6 +254,29 @@ system func heartbeat() : async ()
 4. **Mint Position**: Create concentrated liquidity position
 5. **Track Position**: Store position ID and metadata
 
+#### **Real Token Amount Calculation** ✅ **IMPLEMENTED**
+
+The canister now properly calculates actual token amounts in positions using ICPSwap's documentation workflow:
+
+1. **Get Pool Metadata**: Retrieve current tick, sqrtPriceX96, and liquidity
+2. **Get Position Data**: Retrieve position tickLower, tickUpper, and liquidity
+3. **Calculate Token Amounts**: Use SwapCalculator.getTokenAmountByLiquidity
+4. **Convert to Display Values**: Apply proper decimal conversion
+
+```motoko
+// Example workflow implementation
+let poolMetadata = await icpPool.metadata();
+let positionData = await icpPool.getUserPosition(positionId);
+let tokenAmounts = await swapCalculator.getTokenAmountByLiquidity(
+  position.liquidity,
+  position.tickLower,
+  position.tickUpper,
+  poolMetadata.tick,
+  poolMetadata.sqrtPriceX96,
+  poolMetadata.liquidity
+);
+```
+
 #### **Tick Range Calculation**
 
 ```motoko
@@ -233,12 +288,24 @@ func calculateTickRange(price : Float, volatility : ?Float) : async (Int, Int)
 - Supports dynamic volatility adjustment
 - Ensures valid tick spacing for 0.3% fee tier
 
-### **Error Handling**
+### **Interface Integration** ✅ **FIXED**
+
+#### **Correct Candid Interface**
+
+The canister now uses the exact interface from ICPSwap's `.did` file:
+
+- ✅ **Metadata**: Returns `{ #ok : PoolMetadata; #err : Error }`
+- ✅ **Position IDs**: Returns `{ #ok : [Nat]; #err : Error }`
+- ✅ **Variant Tags**: Uses lowercase tags (`#ok`, `#err`) to match Candid
+- ✅ **Parameter Types**: Uses `Principal` instead of `Account` for user methods
+
+#### **Error Handling**
 
 - Comprehensive error handling for each step
 - Graceful failure recovery
 - Detailed error messages for debugging
 - Transaction rollback on failures
+- **Fallback to liquidity values** if token calculation fails
 
 ### **Security Features**
 
@@ -255,10 +322,13 @@ func calculateTickRange(price : Float, volatility : ?Float) : async (Int, Int)
 # Deploy the canister
 dfx deploy
 
+# Test metadata integration
+dfx canister call optic_agent_backend testMetadata
+
 # Run investment cycle
 dfx canister call optic_agent_backend runInvestmentCycle
 
-# Check balances
+# Check detailed balances (with real token amounts)
 dfx canister call optic_agent_backend getDetailedBalances
 
 # Collect fees
@@ -273,6 +343,33 @@ dfx canister call optic_agent_backend getAllPoolPositions
 
 # Get unused balances
 dfx canister call optic_agent_backend getUnusedBalances
+```
+
+### **Example Output**
+
+```bash
+# getDetailedBalances output
+{
+  icp = { display = 0; amount = 0 };
+  ckBtc = { display = 0; amount = 0 };
+  ckUsdc = { display = 0; amount = 0 };
+  positions = 0
+}
+
+# testMetadata output
+{
+  ok = {
+    fee = 3000;
+    key = "ryjl3-tyaaa-aaaaa-aaaba-cai_xevnm-gaaaa-aaaar-qafnq-cai_3000";
+    sqrtPriceX96 = 19545085355429929225629290197;
+    tick = -27994;
+    liquidity = 4918348185919;
+    token0 = { address = "ryjl3-tyaaa-aaaaa-aaaba-cai"; standard = "ICRC2" };
+    token1 = { address = "xevnm-gaaaa-aaaar-qafnq-cai"; standard = "ICRC2" };
+    maxLiquidityPerTick = 11505743598341114571880798222544994;
+    nextPositionId = 2751
+  }
+}
 ```
 
 ## Development
@@ -368,3 +465,5 @@ For questions and support:
 ---
 
 **Note**: This canister is designed for educational and development purposes. Always test thoroughly before using with real funds.
+
+**Status**: ✅ **Fully functional with complete ICPSwap V3 integration and real token amount calculation.**
