@@ -12,6 +12,7 @@
 
 # generated files
 **/declarations/
+icp-ckusdc-pool.did
 
 # rust
 target/

@@ -24,20 +24,20 @@ module {
   };
 
   public type SwapResult = {
-    #Ok : { amountIn : Nat; amountOut : Nat };
-    #Err : SwapError;
+    #ok : { amountIn : Nat; amountOut : Nat };
+    #err : SwapError;
   };
 
   public type SwapError = {
-    #InsufficientLiquidity;
-    #InsufficientFunds;
-    #SlippageExceeded;
-    #InvalidAmount;
-    #InvalidToken;
-    #InvalidFee;
-    #DeadlineExceeded;
-    #TemporarilyUnavailable;
-    #GenericError : { error_code : Nat; message : Text };
+    #insufficientLiquidity;
+    #insufficientFunds;
+    #slippageExceeded;
+    #invalidAmount;
+    #invalidToken;
+    #invalidFee;
+    #deadlineExceeded;
+    #temporarilyUnavailable;
+    #genericError : { error_code : Nat; message : Text };
   };
 
   public type MintArgs = {
@@ -55,20 +55,20 @@ module {
   };
 
   public type MintResult = {
-    #Ok : { tokenId : Nat; liquidity : Nat; amount0 : Nat; amount1 : Nat };
-    #Err : MintError;
+    #ok : { tokenId : Nat; liquidity : Nat; amount0 : Nat; amount1 : Nat };
+    #err : MintError;
   };
 
   public type MintError = {
-    #InsufficientFunds;
-    #InvalidRatio;
-    #SlippageExceeded;
-    #InvalidTickRange;
-    #InvalidToken;
-    #InvalidFee;
-    #DeadlineExceeded;
-    #TemporarilyUnavailable;
-    #GenericError : { error_code : Nat; message : Text };
+    #insufficientFunds;
+    #invalidRatio;
+    #slippageExceeded;
+    #invalidTickRange;
+    #invalidToken;
+    #invalidFee;
+    #deadlineExceeded;
+    #temporarilyUnavailable;
+    #genericError : { error_code : Nat; message : Text };
   };
 
   public type CollectArgs = {
@@ -79,15 +79,15 @@ module {
   };
 
   public type CollectResult = {
-    #Ok : { amount0 : Nat; amount1 : Nat };
-    #Err : CollectError;
+    #ok : { amount0 : Nat; amount1 : Nat };
+    #err : CollectError;
   };
 
   public type CollectError = {
-    #TokenNotFound;
-    #InsufficientFunds;
-    #TemporarilyUnavailable;
-    #GenericError : { error_code : Nat; message : Text };
+    #tokenNotFound;
+    #insufficientFunds;
+    #temporarilyUnavailable;
+    #genericError : { error_code : Nat; message : Text };
   };
 
 
@@ -103,15 +103,49 @@ module {
     tickUpper : Int;
   };
 
+  public type Token = {
+    address : Text;
+    standard : Text;
+  };
+
+  public type PoolMetadata = {
+    fee : Nat;
+    key : Text;
+    liquidity : Nat;
+    maxLiquidityPerTick : Nat;
+    nextPositionId : Nat;
+    sqrtPriceX96 : Nat;
+    tick : Int;
+    token0 : Token;
+    token1 : Token;
+  };
+
+  public type Error = {
+    #commonError;
+    #insufficientFunds;
+    #internalError : Text;
+    #unsupportedToken : Text;
+  };
+
+  public type MetadataResult = {
+    #ok : PoolMetadata;
+    #err : Error;
+  };
+
+  public type PositionIdsResult = {
+    #ok : [Nat];
+    #err : Error;
+  };
+
     public type Self = actor {
     swap : shared SwapArgs -> async SwapResult;
     mint : shared MintArgs -> async MintResult;
     collect : shared CollectArgs -> async CollectResult;
-    deposit : shared (Text, Nat, Nat) -> async { #Ok : Nat; #Err : Text };
-    depositAndSwap : shared DepositAndSwapArgs -> async { #Ok : Nat; #Err : Text };
-    getUserPositionIdsByPrincipal : shared query Account -> async [Nat];
+    deposit : shared (Text, Nat, Nat) -> async { #ok : Nat; #err : Text };
+    depositAndSwap : shared DepositAndSwapArgs -> async { #ok : Nat; #err : Text };
+    getUserPositionIdsByPrincipal : shared query Principal -> async PositionIdsResult;
     getUserPosition : shared query Nat -> async ?Position;
-    getUserUnusedBalance : shared query Account -> async { amount0 : Nat; amount1 : Nat };
-    metadata : shared query () -> async { sqrtPriceX96 : Nat; tick : Int; liquidity : Nat };
+    getUserUnusedBalance : shared query Principal -> async { amount0 : Nat; amount1 : Nat };
+    metadata : shared query () -> async MetadataResult;
   };
 }; 

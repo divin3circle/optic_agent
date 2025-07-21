@@ -122,43 +122,57 @@ actor OpticAgent {
     let ckBtcNat = await ckBtcLedger.icrc1_balance_of(myAccount());
     let ckBtc = Float.fromInt(ckBtcNat) / 100_000_000.0;
     
-    // Get pool metadata (sqrtPriceX96)
-    let poolMetadata = await icpPool.metadata();
+    // Get pool metadata (following ICPSwap documentation workflow)
+    let poolMetadataResult = await icpPool.metadata();
     
-    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myPoolAccount());
+    let positionIdsResult = await icpPool.getUserPositionIdsByPrincipal(Principal.fromActor(OpticAgent));
     
     var totalPositionValue = 0.0;
-    for (positionId in positionIds.vals()) {
-      switch (await icpPool.getUserPosition(positionId)) {
-        case (?position) {
-          // Use SwapCalculator to get actual token amounts for this position
-          switch (await swapCalculator.getPositionTokenAmount(
-            position.liquidity, 
-            position.tickLower, 
-            position.tickUpper, 
-            poolMetadata.tick, 
-            poolMetadata.sqrtPriceX96, 
-            poolMetadata.liquidity
-          )) {
-            case (#Ok tokenAmounts) {
-              // Convert token amounts to display values
-              let amount0Display = Float.fromInt(tokenAmounts.amount0) / 100_000_000.0; // ICP decimals
-              let amount1Display = Float.fromInt(tokenAmounts.amount1) / 1_000_000.0;   // ckUSDC decimals
-              
-              // For now, we'll use the ckUSDC value as the position value
-              // In a real implementation, you might want to convert both to a common currency
-              totalPositionValue += amount0Display * 5;
-              totalPositionValue += amount1Display;
+    switch (positionIdsResult) {
+      case (#ok positionIds) {
+        for (positionId in positionIds.vals()) {
+          switch (await icpPool.getUserPosition(positionId)) {
+            case (?position) {
+              // Use SwapCalculator to get actual token amounts (following ICPSwap documentation)
+              switch (poolMetadataResult) {
+                case (#ok poolMetadata) {
+                  switch (await swapCalculator.getTokenAmountByLiquidity(
+                    position.liquidity, 
+                    position.tickLower, 
+                    position.tickUpper, 
+                    poolMetadata.tick, 
+                    poolMetadata.sqrtPriceX96, 
+                    poolMetadata.liquidity
+                  )) {
+                    case (#ok tokenAmounts) {
+                      // Convert token amounts to display values
+                      let amount0Display = Float.fromInt(tokenAmounts.amount0) / 100_000_000.0; // ICP decimals
+                      let amount1Display = Float.fromInt(tokenAmounts.amount1) / 1_000_000.0;   // ckUSDC decimals
+                      
+                      // Use ckUSDC value as the position value
+                      totalPositionValue += amount0Display * 5; // Approximate ICP value in USD
+                      totalPositionValue += amount1Display;
+                    };
+                    case (#err _) {
+                      // If calculation fails, fall back to liquidity value
+                      totalPositionValue += Float.fromInt(position.liquidity) / 1e18;
+                    };
+                  };
+                };
+                case (#err _) {
+                  // If metadata fails, fall back to liquidity value
+                  totalPositionValue += Float.fromInt(position.liquidity) / 1e18;
+                };
+              };
             };
-            case (#Err _) {
-              // If calculation fails, fall back to liquidity value
-              totalPositionValue += Float.fromInt(position.liquidity) / 1e18;
+            case (null) {
+              // Position not found, skip
             };
           };
         };
-        case (null) {
-          // Position not found, skip
-        };
+      };
+      case (#err _) {
+        // If getting position IDs fails, return 0 for positions
       };
     };
     
@@ -185,14 +199,14 @@ actor OpticAgent {
         };
         
         switch (await icpPool.depositAndSwap(depositAndSwapArgs)) {
-          case (#Ok swapResult) { 
+          case (#ok swapResult) { 
             // Now we have ckUSDC, let's add liquidity
             // First deposit ICP for liquidity
             switch (await icpPool.deposit(ICP_TOKEN, half, 10000)) { // ICP fee is 10000
-              case (#Ok _) {
+              case (#ok _) {
                 // Then deposit the received ckUSDC for liquidity
                 switch (await icpPool.deposit(CKUSDC_TOKEN, swapResult, 0)) { // ckUSDC fee is 0
-                  case (#Ok _) {
+                  case (#ok _) {
                     let (tickLower, tickUpper) = await calculateTickRange(info.token1Price, null);
                     
                     let mintArgs : Pool.MintArgs = {
@@ -210,7 +224,7 @@ actor OpticAgent {
                     };
                     
                     switch (await icpPool.mint(mintArgs)) {
-                      case (#Ok mintResult) {
+                      case (#ok mintResult) {
                         let newPosition : Position = {
                           tokenId = mintResult.tokenId;
                           liquidity = mintResult.liquidity;
@@ -228,22 +242,22 @@ actor OpticAgent {
                           timestamp = Time.now();
                         };
                       };
-                      case (#Err e) { 
+                      case (#err e) { 
                         throw Error.reject("Failed to add liquidity: " # debug_show(e));
                       };
                     };
                   };
-                  case (#Err e) {
+                  case (#err e) {
                     throw Error.reject("Failed to deposit ckUSDC to pool: " # e);
                   };
                 };
               };
-              case (#Err e) {
+              case (#err e) {
                 throw Error.reject("Failed to deposit ICP to pool: " # e);
               };
             };
           };
-          case (#Err e) {
+          case (#err e) {
             throw Error.reject("Failed to deposit and swap: " # e);
           };
         };
@@ -258,24 +272,31 @@ actor OpticAgent {
     var totalAmount0 = 0;
     var totalAmount1 = 0;
     
-    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myPoolAccount());
+    let positionIdsResult = await icpPool.getUserPositionIdsByPrincipal(Principal.fromActor(OpticAgent));
     
-    for (positionId in positionIds.vals()) {
-      let collectArgs : Pool.CollectArgs = {
-        tokenId = positionId;
-        recipient = myPoolAccount();
-        amount0Max = 2_147_483_647; // Max Nat32 value as approximation
-        amount1Max = 2_147_483_647; // Max Nat32 value as approximation
+    switch (positionIdsResult) {
+      case (#ok positionIds) {
+        for (positionId in positionIds.vals()) {
+          let collectArgs : Pool.CollectArgs = {
+            tokenId = positionId;
+            recipient = myPoolAccount();
+            amount0Max = 2_147_483_647; // Max Nat32 value as approximation
+            amount1Max = 2_147_483_647; // Max Nat32 value as approximation
+          };
+          
+          switch (await icpPool.collect(collectArgs)) {
+            case (#ok result) {
+              totalAmount0 += result.amount0;
+              totalAmount1 += result.amount1;
+            };
+            case (#err _) {
+              // Continue with other positions even if one fails
+            };
+          };
+        };
       };
-      
-      switch (await icpPool.collect(collectArgs)) {
-        case (#Ok result) {
-          totalAmount0 += result.amount0;
-          totalAmount1 += result.amount1;
-        };
-        case (#Err _) {
-          // Continue with other positions even if one fails
-        };
+      case (#err _) {
+        // If getting position IDs fails, return 0
       };
     };
     
@@ -287,17 +308,24 @@ actor OpticAgent {
   };
 
   public shared func getAllPoolPositions() : async [Pool.Position] {
-    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myPoolAccount());
+    let positionIdsResult = await icpPool.getUserPositionIdsByPrincipal(Principal.fromActor(OpticAgent));
     
     var allPositions : [Pool.Position] = [];
-    for (positionId in positionIds.vals()) {
-      switch (await icpPool.getUserPosition(positionId)) {
-        case (?position) {
-          allPositions := Array.append(allPositions, [position]);
+    switch (positionIdsResult) {
+      case (#ok positionIds) {
+        for (positionId in positionIds.vals()) {
+          switch (await icpPool.getUserPosition(positionId)) {
+            case (?position) {
+              allPositions := Array.append(allPositions, [position]);
+            };
+            case (null) {
+              // Position not found, skip
+            };
+          };
         };
-        case (null) {
-          // Position not found, skip
-        };
+      };
+      case (#err _) {
+        // If getting position IDs fails, return empty array
       };
     };
     
@@ -305,7 +333,21 @@ actor OpticAgent {
   };
 
   public shared func getUnusedBalances() : async { amount0 : Nat; amount1 : Nat } {
-    await icpPool.getUserUnusedBalance(myPoolAccount())
+    await icpPool.getUserUnusedBalance(Principal.fromActor(OpticAgent))
+  };
+
+  public shared func testMetadata() : async Pool.MetadataResult {
+    await icpPool.metadata()
+  };
+
+  public shared func testMetadataRaw() : async Text {
+    // This will help us see what the actual response structure is
+    try {
+      let result = await icpPool.metadata();
+      "Success: metadata call completed"
+    } catch (error) {
+      "Error: metadata call failed"
+    }
   };
 
   public shared func getDetailedBalances() : async { 
@@ -333,60 +375,63 @@ actor OpticAgent {
       display = Float.fromInt(ckBtcNat) / 100_000_000.0 
     };
     
-    // Get pool metadata (sqrtPriceX96)
-    let poolMetadata = await icpPool.metadata();
+    // Get pool metadata (following ICPSwap documentation workflow)
+    let poolMetadataResult = await icpPool.metadata();
     
-    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myPoolAccount());
+    let positionIdsResult = await icpPool.getUserPositionIdsByPrincipal(Principal.fromActor(OpticAgent));
     
     var totalPositionValue = 0.0;
-    for (positionId in positionIds.vals()) {
-      switch (await icpPool.getUserPosition(positionId)) {
-        case (?position) {
-          // Use SwapCalculator to get actual token amounts for this position
-          switch (await swapCalculator.getPositionTokenAmount(
-            position.liquidity, 
-            position.tickLower, 
-            position.tickUpper, 
-            poolMetadata.tick, 
-            poolMetadata.sqrtPriceX96, 
-            poolMetadata.liquidity
-          )) {
-            case (#Ok tokenAmounts) {
-              // Convert token amounts to display values
-              let amount0Display = Float.fromInt(tokenAmounts.amount0) / 100_000_000.0; // ICP decimals
-              let amount1Display = Float.fromInt(tokenAmounts.amount1) / 1_000_000.0;   // ckUSDC decimals
-              
-              // For now, we'll use the ckUSDC value as the position value
-              // In a real implementation, you might want to convert both to a common currency
-              totalPositionValue += amount0Display * 5;
-              totalPositionValue += amount1Display;
+    switch (positionIdsResult) {
+      case (#ok positionIds) {
+        for (positionId in positionIds.vals()) {
+          switch (await icpPool.getUserPosition(positionId)) {
+            case (?position) {
+              // Use SwapCalculator to get actual token amounts (following ICPSwap documentation)
+              switch (poolMetadataResult) {
+                case (#ok poolMetadata) {
+                  switch (await swapCalculator.getTokenAmountByLiquidity(
+                    position.liquidity, 
+                    position.tickLower, 
+                    position.tickUpper, 
+                    poolMetadata.tick, 
+                    poolMetadata.sqrtPriceX96, 
+                    poolMetadata.liquidity
+                  )) {
+                    case (#ok tokenAmounts) {
+                      // Convert token amounts to display values
+                      let amount0Display = Float.fromInt(tokenAmounts.amount0) / 100_000_000.0; // ICP decimals
+                      let amount1Display = Float.fromInt(tokenAmounts.amount1) / 1_000_000.0;   // ckUSDC decimals
+                      
+                      // Use ckUSDC value as the position value
+                      totalPositionValue += amount0Display * 5; // Approximate ICP value in USD
+                      totalPositionValue += amount1Display;
+                    };
+                    case (#err _) {
+                      // If calculation fails, fall back to liquidity value
+                      totalPositionValue += Float.fromInt(position.liquidity) / 1e18;
+                    };
+                  };
+                };
+                case (#err _) {
+                  // If metadata fails, fall back to liquidity value
+                  totalPositionValue += Float.fromInt(position.liquidity) / 1e18;
+                };
+              };
             };
-            case (#Err _) {
-              // If calculation fails, fall back to liquidity value
-              totalPositionValue += Float.fromInt(position.liquidity) / 1e18;
+            case (null) {
+              // Position not found, skip
             };
           };
         };
-        case (null) {
-          // Position not found, skip
-        };
+      };
+      case (#err _) {
+        // If getting position IDs fails, return 0
       };
     };
     
     { icp; ckUsdc; ckBtc; positions = totalPositionValue }
   };
 
-  // func calculateOptimalLiquidity(amount0 : Nat, amount1 : Nat, tickLower : Int, tickUpper : Int) : async { amount0 : Nat; amount1 : Nat } {
-  //   let liquidity = 1000000;
-  //   switch (await swapCalculator.getPositionTokenAmount(liquidity, tickLower, tickUpper, 0, amount0, amount1)) {
-  //     case (#Ok result) {
-  //       { amount0 = result.amount0; amount1 = result.amount1 }
-  //     };
-  //     case (#Err _) {
-  //       { amount0 = amount0 / 2; amount1 = amount1 / 2 }
-  //     };
-  //   }
-  // };
 
   public shared func init() : async () {
     
