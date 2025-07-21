@@ -74,6 +74,10 @@ actor OpticAgent {
     { owner = Principal.fromActor(OpticAgent); subaccount = null }
   };
 
+  func myPoolAccount() : Pool.Account {
+    { owner = Principal.fromActor(OpticAgent); subaccount = null }
+  };
+
   func getCurrentTime() : Nat64 {
     Nat64.fromNat(Int.abs(Time.now()));
   };
@@ -118,13 +122,39 @@ actor OpticAgent {
     let ckBtcNat = await ckBtcLedger.icrc1_balance_of(myAccount());
     let ckBtc = Float.fromInt(ckBtcNat) / 100_000_000.0;
     
-    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myAccount());
+    // Get pool metadata (sqrtPriceX96)
+    let poolMetadata = await icpPool.metadata();
     
-    var totalLiquidity = 0.0;
+    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myPoolAccount());
+    
+    var totalPositionValue = 0.0;
     for (positionId in positionIds.vals()) {
       switch (await icpPool.getUserPosition(positionId)) {
         case (?position) {
-          totalLiquidity += Float.fromInt(position.liquidity);
+          // Use SwapCalculator to get actual token amounts for this position
+          switch (await swapCalculator.getPositionTokenAmount(
+            position.liquidity, 
+            position.tickLower, 
+            position.tickUpper, 
+            poolMetadata.tick, 
+            poolMetadata.sqrtPriceX96, 
+            poolMetadata.liquidity
+          )) {
+            case (#Ok tokenAmounts) {
+              // Convert token amounts to display values
+              let amount0Display = Float.fromInt(tokenAmounts.amount0) / 100_000_000.0; // ICP decimals
+              let amount1Display = Float.fromInt(tokenAmounts.amount1) / 1_000_000.0;   // ckUSDC decimals
+              
+              // For now, we'll use the ckUSDC value as the position value
+              // In a real implementation, you might want to convert both to a common currency
+              totalPositionValue += amount0Display * 5;
+              totalPositionValue += amount1Display;
+            };
+            case (#Err _) {
+              // If calculation fails, fall back to liquidity value
+              totalPositionValue += Float.fromInt(position.liquidity) / 1e18;
+            };
+          };
         };
         case (null) {
           // Position not found, skip
@@ -132,7 +162,7 @@ actor OpticAgent {
       };
     };
     
-    return { icp; ckUsdc; ckBtc; positions = totalLiquidity };
+    return { icp; ckUsdc; ckBtc; positions = totalPositionValue };
   };
 
   public shared func runInvestmentCycle() : async InvestmentEvent {
@@ -175,7 +205,7 @@ actor OpticAgent {
                       amount1Desired = swapResult;
                       amount0Min = half * 99 / 100; // 1% slippage
                       amount1Min = swapResult * 99 / 100; // 1% slippage
-                      recipient = myAccount();
+                      recipient = myPoolAccount();
                       deadline = getCurrentTime() + 300; // 5 minutes
                     };
                     
@@ -228,12 +258,12 @@ actor OpticAgent {
     var totalAmount0 = 0;
     var totalAmount1 = 0;
     
-    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myAccount());
+    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myPoolAccount());
     
     for (positionId in positionIds.vals()) {
       let collectArgs : Pool.CollectArgs = {
         tokenId = positionId;
-        recipient = myAccount();
+        recipient = myPoolAccount();
         amount0Max = 2_147_483_647; // Max Nat32 value as approximation
         amount1Max = 2_147_483_647; // Max Nat32 value as approximation
       };
@@ -257,7 +287,7 @@ actor OpticAgent {
   };
 
   public shared func getAllPoolPositions() : async [Pool.Position] {
-    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myAccount());
+    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myPoolAccount());
     
     var allPositions : [Pool.Position] = [];
     for (positionId in positionIds.vals()) {
@@ -275,7 +305,7 @@ actor OpticAgent {
   };
 
   public shared func getUnusedBalances() : async { amount0 : Nat; amount1 : Nat } {
-    await icpPool.getUserUnusedBalance(myAccount())
+    await icpPool.getUserUnusedBalance(myPoolAccount())
   };
 
   public shared func getDetailedBalances() : async { 
@@ -303,13 +333,39 @@ actor OpticAgent {
       display = Float.fromInt(ckBtcNat) / 100_000_000.0 
     };
     
-    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myAccount());
+    // Get pool metadata (sqrtPriceX96)
+    let poolMetadata = await icpPool.metadata();
     
-    var totalLiquidity = 0.0;
+    let positionIds = await icpPool.getUserPositionIdsByPrincipal(myPoolAccount());
+    
+    var totalPositionValue = 0.0;
     for (positionId in positionIds.vals()) {
       switch (await icpPool.getUserPosition(positionId)) {
         case (?position) {
-          totalLiquidity += Float.fromInt(position.liquidity);
+          // Use SwapCalculator to get actual token amounts for this position
+          switch (await swapCalculator.getPositionTokenAmount(
+            position.liquidity, 
+            position.tickLower, 
+            position.tickUpper, 
+            poolMetadata.tick, 
+            poolMetadata.sqrtPriceX96, 
+            poolMetadata.liquidity
+          )) {
+            case (#Ok tokenAmounts) {
+              // Convert token amounts to display values
+              let amount0Display = Float.fromInt(tokenAmounts.amount0) / 100_000_000.0; // ICP decimals
+              let amount1Display = Float.fromInt(tokenAmounts.amount1) / 1_000_000.0;   // ckUSDC decimals
+              
+              // For now, we'll use the ckUSDC value as the position value
+              // In a real implementation, you might want to convert both to a common currency
+              totalPositionValue += amount0Display * 5;
+              totalPositionValue += amount1Display;
+            };
+            case (#Err _) {
+              // If calculation fails, fall back to liquidity value
+              totalPositionValue += Float.fromInt(position.liquidity) / 1e18;
+            };
+          };
         };
         case (null) {
           // Position not found, skip
@@ -317,7 +373,7 @@ actor OpticAgent {
       };
     };
     
-    { icp; ckUsdc; ckBtc; positions = totalLiquidity }
+    { icp; ckUsdc; ckBtc; positions = totalPositionValue }
   };
 
   // func calculateOptimalLiquidity(amount0 : Nat, amount1 : Nat, tickLower : Int, tickUpper : Int) : async { amount0 : Nat; amount1 : Nat } {
