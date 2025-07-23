@@ -66,8 +66,12 @@ Motoko has built-in `actor { heartbeat }` support, so `runInvestmentCycle()` fir
 ## Usage
 
 ```bash
+# Clone Repository
+git clone https://github.com/divin3circle/optic_agent.git
+
 # Deploy
-dfx deploy
+dfx deploy --playground optic_agent_backend
+# Note: only deploy the optic agent canister to playground
 
 # Check balances
 dfx canister call optic_agent_backend getDetailedBalances
