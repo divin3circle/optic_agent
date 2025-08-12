@@ -1,0 +1,5 @@
+service: () -> {
+    getBalance: () -> (opt record {icpBalance:nat64; ckUSDCBalance:nat64});
+    getSelfAccountIdentifier: () -> (text) query;
+    getSelfPrincipal: () -> (text) query;
+}

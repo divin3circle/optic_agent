@@ -1,0 +1,15 @@
+{
+    "canisters": {
+        "optic_agent": {
+            "type": "azle",
+            "main": "src/index.ts",
+            "custom": {
+                "experimental": true
+            },
+            "declarations": {
+                "output": "test/dfx_generated/optic_agent",
+                "node_compatibility": true
+            }
+        }
+    }
+}
