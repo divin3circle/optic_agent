@@ -12,7 +12,12 @@ This canister also provides a function to check the available fees earned by the
 
 ## Functions
 
-`getTokenBalances`
+✅`getBalance` returns the ckUSDC and ICP balances of the canister in decimals
+🔂`swap` swaps portion of treasury ckUSDC to ICP
+🔂`balance` gets the amount of ckUSDC to swap to ICP to get a balanced USD value ratio
+🔂`getICPUSDValue` gets current ICP value in USD
+🔂`addLiquidity` adds liquidity to the ICP/ckUSDC pool
+🔂`get
 
 
 ## Local SetUp
@@ -24,15 +29,6 @@ Follow the guide [here](https://internetcomputer.org/docs/defi/token-ledgers/set
 2. ckUSDC Setup
 
 Follow the guide [here](https://internetcomputer.org/docs/defi/token-ledgers/setup/icrc1_ledger_setup) to setup the ckUSDC ledger locally. 
-Alternatively clone, and deploy [this]() ready made ckUSDC canister. 
+Alternatively clone, and deploy [this](https://github.com/divin3circle/local_ckUSDC_ledger) ready configured demo ckUSDC canister. 
 `NOTE: Remember to edit the init_args in the dfx.json file`
 
- dfx canister call ufxgi-4p777-77774-qaadq-cai icrc1_balance_of "(record { owner = principal \"hpikg-6exdt-jn33w-ndty3-fc7jc-tl2lr-buih3-cs3y7-tftkp-sfp62-gqe\"; })"
-(1_000_000 : nat)
-
-dfx canister call ufxgi-4p777-77774-qaadq-cai icrc1_transfer '(
-  record {
-    to = record { owner = principal "1346aa5c96fd37f76dfb398118cf216f3b765788f162b426a47e11d27dba9efa"; };
-    amount = 10_000;
-  }
-)'

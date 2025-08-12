@@ -1,6 +1,13 @@
 
-
-
+/**
+ * MAINNET LEDGER CANISTER ID
+ */
+export const CKUSDC_LEDGER_CANISTER_ID = "xevnm-gaaaa-aaaar-qafnq-cai"
 export const ICP_LEDGER_CANISTER_ID = "ryjl3-tyaaa-aaaaa-aaaba-cai"
-export const CKUSDC_CANISTER_ID = "ufxgi-4p777-77774-qaadq-cai"
 
+
+
+/**
+ * LOCAL CKUSDC CANISTER ID
+ */
+export const LOCAL_CKUSDC_CANISTER_ID = "ufxgi-4p777-77774-qaadq-cai"

@@ -1,6 +1,6 @@
 import { LedgerCanister, AccountIdentifier } from '@dfinity/ledger-icp';
 import { call, canisterSelf, IDL, Principal, query, update } from 'azle';
-import  { CKUSDC_CANISTER_ID, ICP_LEDGER_CANISTER_ID } from './utils/agent';
+import  { LOCAL_CKUSDC_CANISTER_ID, ICP_LEDGER_CANISTER_ID } from './utils/agent';
 
 const ReturnICPBalance = IDL.Record({
     e8s: IDL.Nat64,
@@ -79,7 +79,7 @@ async function fetchMyckUSDCBalance(): Promise<bigint> {
     const accountData = {
         owner: myPrincipal,
     }
-    const result = await call(CKUSDC_CANISTER_ID, 'icrc1_balance_of', {
+    const result = await call(LOCAL_CKUSDC_CANISTER_ID, 'icrc1_balance_of', {
         args: [accountData],
         paramIdlTypes: [ParamIcrc1BalanceOf],
         returnIdlType: IDL.Nat
