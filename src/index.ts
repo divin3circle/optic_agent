@@ -1,28 +1,9 @@
-import { LedgerCanister, AccountIdentifier } from '@dfinity/ledger-icp';
-import { call, canisterSelf, IDL, Principal, query, update } from 'azle';
-import  { LOCAL_CKUSDC_CANISTER_ID, ICP_LEDGER_CANISTER_ID } from './utils/agent';
+import { AccountIdentifier } from '@dfinity/ledger-icp';
+import { call, canisterSelf, IDL, query, update } from 'azle';
+import  { LOCAL_CKUSDC_CANISTER_ID, ICP_LEDGER_CANISTER_ID, CKUSDC_LEDGER_CANISTER_ID, ICP_CKUSDC_POOL_CANISTER_ID} from './utils/agent';
+import { OpticAccount, ParamAccountIdentifier, ReturnICPBalance, ParamIcrc1BalanceOf } from './types';
+import { PoolMetadata } from './interfaces/icp_ckusdc_pool';
 
-const ReturnICPBalance = IDL.Record({
-    e8s: IDL.Nat64,
-})
-
-const ParamAccountIdentifier = IDL.Record({
-    account: IDL.Vec(IDL.Nat8),
-})
-
-const ParamIcrc1BalanceOf = IDL.Record({
-    owner: IDL.Principal,
-})
-
-const OpticAccount = IDL.Record({
-    icpBalance: IDL.Nat64,
-    ckUSDCBalance: IDL.Nat64,
-})
-
-type OpticAccount = {
-    icpBalance: bigint;
-    ckUSDCBalance: bigint;
-}
 
 export default class {
     @update([], IDL.Opt(OpticAccount))
@@ -53,6 +34,35 @@ export default class {
     getSelfPrincipal(): string {
         return canisterSelf().toString();
     }
+
+    @update([], IDL.Opt(IDL.Record({
+        fee: IDL.Nat, 
+        key: IDL.Text, 
+        sqrtPriceX96: IDL.Nat,         // Changed back to IDL.Nat
+        tick: IDL.Int,                 
+        liquidity: IDL.Nat, 
+        token0: IDL.Record({ 
+            address: IDL.Text, 
+            standard: IDL.Text 
+        }), 
+        token1: IDL.Record({ 
+            address: IDL.Text, 
+            standard: IDL.Text 
+        }), 
+        maxLiquidityPerTick: IDL.Nat,  // Changed back to IDL.Nat
+        nextPositionId: IDL.Nat         // Changed back to IDL.Nat
+    })))
+    async getICPCKUSDCPoolMetadata(): Promise<[PoolMetadata] | []> {
+        try {
+            const metadata = await fetchPoolMetadata();
+            return [metadata];
+        } catch (error) {
+            console.error('Error fetching pool metadata:', error);
+            return [];
+        }
+    }
+
+
 }
 
 async function fetchMyICPBalance(): Promise<bigint> {
@@ -85,4 +95,43 @@ async function fetchMyckUSDCBalance(): Promise<bigint> {
         returnIdlType: IDL.Nat
     })
     return result;
+}
+
+
+export async function fetchPoolMetadata(): Promise<PoolMetadata> {
+    const result = await call(ICP_CKUSDC_POOL_CANISTER_ID, 'metadata', {
+        args: [],
+        paramIdlTypes: [],
+        returnIdlType: IDL.Variant({ 
+            ok: IDL.Record({ 
+                fee: IDL.Nat, 
+                key: IDL.Text, 
+                sqrtPriceX96: IDL.Nat,         
+                tick: IDL.Int,                 
+                liquidity: IDL.Nat, 
+                token0: IDL.Record({ 
+                    address: IDL.Text, 
+                    standard: IDL.Text 
+                }), 
+                token1: IDL.Record({ 
+                    address: IDL.Text, 
+                    standard: IDL.Text 
+                }), 
+                maxLiquidityPerTick: IDL.Nat,  
+                nextPositionId: IDL.Nat         
+            }), 
+            err: IDL.Variant({                 
+                CommonError: IDL.Null,
+                InternalError: IDL.Text,
+                UnsupportedToken: IDL.Text,
+                InsufficientFunds: IDL.Null
+            })
+        })
+    });
+    
+    if ('ok' in result) {
+        return result.ok;
+    } else {
+        throw new Error(`Failed to fetch metadata: ${JSON.stringify(result.err)}`);
+    }
 }

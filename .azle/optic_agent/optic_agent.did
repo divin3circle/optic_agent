@@ -1,5 +1,6 @@
 service: () -> {
     getBalance: () -> (opt record {icpBalance:nat64; ckUSDCBalance:nat64});
+    getICPCKUSDCPoolMetadata: () -> (opt record {fee:nat; key:text; sqrtPriceX96:nat; tick:int; liquidity:nat; token0:record {address:text; standard:text}; token1:record {address:text; standard:text}; maxLiquidityPerTick:nat; nextPositionId:nat});
     getSelfAccountIdentifier: () -> (text) query;
     getSelfPrincipal: () -> (text) query;
 }

@@ -63230,7 +63230,8 @@ init_esm();
 // src/index.ts
 var src_exports = {};
 __export(src_exports, {
-  default: () => src_default
+  default: () => src_default,
+  fetchPoolMetadata: () => fetchPoolMetadata
 });
 
 // node_modules/@dfinity/agent/lib/esm/actor.js
@@ -63578,10 +63579,11 @@ var A2 = BigInt(1e4);
 var Ie = BigInt(1e8);
 
 // src/utils/agent.ts
+var CKUSDC_LEDGER_CANISTER_ID = "xevnm-gaaaa-aaaar-qafnq-cai";
 var ICP_LEDGER_CANISTER_ID = "ryjl3-tyaaa-aaaaa-aaaba-cai";
-var CKUSDC_CANISTER_ID = "ufxgi-4p777-77774-qaadq-cai";
+var ICP_CKUSDC_POOL_CANISTER_ID = "mohjv-bqaaa-aaaag-qjyia-cai";
 
-// src/index.ts
+// src/types/index.ts
 var ReturnICPBalance = idl_exports.Record({
   e8s: idl_exports.Nat64
 });
@@ -63595,8 +63597,29 @@ var OpticAccount = idl_exports.Record({
   icpBalance: idl_exports.Nat64,
   ckUSDCBalance: idl_exports.Nat64
 });
-var _getSelfPrincipal_dec, _getSelfAccountIdentifier_dec, _getBalance_dec, _init;
-_getBalance_dec = [update2([], idl_exports.Opt(OpticAccount))], _getSelfAccountIdentifier_dec = [query2([], idl_exports.Text)], _getSelfPrincipal_dec = [query2([], idl_exports.Text)];
+
+// src/index.ts
+var _getICPCKUSDCPoolMetadata_dec, _getSelfPrincipal_dec, _getSelfAccountIdentifier_dec, _getBalance_dec, _init;
+_getBalance_dec = [update2([], idl_exports.Opt(OpticAccount))], _getSelfAccountIdentifier_dec = [query2([], idl_exports.Text)], _getSelfPrincipal_dec = [query2([], idl_exports.Text)], _getICPCKUSDCPoolMetadata_dec = [update2([], idl_exports.Opt(idl_exports.Record({
+  fee: idl_exports.Nat,
+  key: idl_exports.Text,
+  sqrtPriceX96: idl_exports.Nat,
+  // Changed back to IDL.Nat
+  tick: idl_exports.Int,
+  liquidity: idl_exports.Nat,
+  token0: idl_exports.Record({
+    address: idl_exports.Text,
+    standard: idl_exports.Text
+  }),
+  token1: idl_exports.Record({
+    address: idl_exports.Text,
+    standard: idl_exports.Text
+  }),
+  maxLiquidityPerTick: idl_exports.Nat,
+  // Changed back to IDL.Nat
+  nextPositionId: idl_exports.Nat
+  // Changed back to IDL.Nat
+})))];
 var src_default = class {
   constructor() {
     __runInitializers(_init, 5, this);
@@ -63624,11 +63647,21 @@ var src_default = class {
   getSelfPrincipal() {
     return canisterSelf().toString();
   }
+  async getICPCKUSDCPoolMetadata() {
+    try {
+      const metadata = await fetchPoolMetadata();
+      return [metadata];
+    } catch (error2) {
+      console.error("Error fetching pool metadata:", error2);
+      return [];
+    }
+  }
 };
 _init = __decoratorStart(null);
 __decorateElement(_init, 1, "getBalance", _getBalance_dec, src_default);
 __decorateElement(_init, 1, "getSelfAccountIdentifier", _getSelfAccountIdentifier_dec, src_default);
 __decorateElement(_init, 1, "getSelfPrincipal", _getSelfPrincipal_dec, src_default);
+__decorateElement(_init, 1, "getICPCKUSDCPoolMetadata", _getICPCKUSDCPoolMetadata_dec, src_default);
 __decoratorMetadata(_init, src_default);
 async function fetchMyICPBalance() {
   const myAccountIdentifier = N3.fromPrincipal({
@@ -63649,12 +63682,48 @@ async function fetchMyckUSDCBalance() {
   const accountData = {
     owner: myPrincipal
   };
-  const result2 = await call(CKUSDC_CANISTER_ID, "icrc1_balance_of", {
+  const result2 = await call(CKUSDC_LEDGER_CANISTER_ID, "icrc1_balance_of", {
     args: [accountData],
     paramIdlTypes: [ParamIcrc1BalanceOf],
     returnIdlType: idl_exports.Nat
   });
   return result2;
+}
+async function fetchPoolMetadata() {
+  const result2 = await call(ICP_CKUSDC_POOL_CANISTER_ID, "metadata", {
+    args: [],
+    paramIdlTypes: [],
+    returnIdlType: idl_exports.Variant({
+      ok: idl_exports.Record({
+        fee: idl_exports.Nat,
+        key: idl_exports.Text,
+        sqrtPriceX96: idl_exports.Nat,
+        tick: idl_exports.Int,
+        liquidity: idl_exports.Nat,
+        token0: idl_exports.Record({
+          address: idl_exports.Text,
+          standard: idl_exports.Text
+        }),
+        token1: idl_exports.Record({
+          address: idl_exports.Text,
+          standard: idl_exports.Text
+        }),
+        maxLiquidityPerTick: idl_exports.Nat,
+        nextPositionId: idl_exports.Nat
+      }),
+      err: idl_exports.Variant({
+        CommonError: idl_exports.Null,
+        InternalError: idl_exports.Text,
+        UnsupportedToken: idl_exports.Text,
+        InsufficientFunds: idl_exports.Null
+      })
+    })
+  });
+  if ("ok" in result2) {
+    return result2.ok;
+  } else {
+    throw new Error(`Failed to fetch metadata: ${JSON.stringify(result2.err)}`);
+  }
 }
 
 // <stdin>
