@@ -13,6 +13,7 @@ This canister also provides a function to check the available fees earned by the
 ## Functions
 
 - ✅`getBalance` returns the ckUSDC and ICP balances of the canister in decimals
+- ✅`getPoolMetadata` returns the current status of the ICP/ckUSDC pool as detailed by ICPSwap [here](https://github.com/ICPSwap-Labs/docs?tab=readme-ov-file)
 - 🔂`swap` swaps portion of treasury ckUSDC to ICP
 - 🔂`balance` gets the amount of ckUSDC to swap to ICP to get a balanced USD value ratio
 - 🔂`getICPUSDValue` gets current ICP value in USD

@@ -38,7 +38,7 @@ export default class {
     @update([], IDL.Opt(IDL.Record({
         fee: IDL.Nat, 
         key: IDL.Text, 
-        sqrtPriceX96: IDL.Nat,         // Changed back to IDL.Nat
+        sqrtPriceX96: IDL.Nat,
         tick: IDL.Int,                 
         liquidity: IDL.Nat, 
         token0: IDL.Record({ 
@@ -49,12 +49,13 @@ export default class {
             address: IDL.Text, 
             standard: IDL.Text 
         }), 
-        maxLiquidityPerTick: IDL.Nat,  // Changed back to IDL.Nat
-        nextPositionId: IDL.Nat         // Changed back to IDL.Nat
+        maxLiquidityPerTick: IDL.Nat, 
+        nextPositionId: IDL.Nat         
     })))
     async getICPCKUSDCPoolMetadata(): Promise<[PoolMetadata] | []> {
         try {
             const metadata = await fetchPoolMetadata();
+            console.log(metadata);
             return [metadata];
         } catch (error) {
             console.error('Error fetching pool metadata:', error);
@@ -130,6 +131,7 @@ export async function fetchPoolMetadata(): Promise<PoolMetadata> {
     });
     
     if ('ok' in result) {
+        console.log(result.ok);
         return result.ok;
     } else {
         throw new Error(`Failed to fetch metadata: ${JSON.stringify(result.err)}`);

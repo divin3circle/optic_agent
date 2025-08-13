@@ -8,7 +8,7 @@ export const ICP_LEDGER_CANISTER_ID = "ryjl3-tyaaa-aaaaa-aaaba-cai"
 /**
  * LOCAL CKUSDC CANISTER ID
  */
-export const LOCAL_CKUSDC_CANISTER_ID = "ufxgi-4p777-77774-qaadq-cai"
+export const LOCAL_CKUSDC_CANISTER_ID = "u6s2n-gx777-77774-qaaba-cai"
 
 /**
  * POOLS CANISTER ID

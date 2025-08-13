@@ -63579,8 +63579,8 @@ var A2 = BigInt(1e4);
 var Ie = BigInt(1e8);
 
 // src/utils/agent.ts
-var CKUSDC_LEDGER_CANISTER_ID = "xevnm-gaaaa-aaaar-qafnq-cai";
 var ICP_LEDGER_CANISTER_ID = "ryjl3-tyaaa-aaaaa-aaaba-cai";
+var LOCAL_CKUSDC_CANISTER_ID = "u6s2n-gx777-77774-qaaba-cai";
 var ICP_CKUSDC_POOL_CANISTER_ID = "mohjv-bqaaa-aaaag-qjyia-cai";
 
 // src/types/index.ts
@@ -63604,7 +63604,6 @@ _getBalance_dec = [update2([], idl_exports.Opt(OpticAccount))], _getSelfAccountI
   fee: idl_exports.Nat,
   key: idl_exports.Text,
   sqrtPriceX96: idl_exports.Nat,
-  // Changed back to IDL.Nat
   tick: idl_exports.Int,
   liquidity: idl_exports.Nat,
   token0: idl_exports.Record({
@@ -63616,9 +63615,7 @@ _getBalance_dec = [update2([], idl_exports.Opt(OpticAccount))], _getSelfAccountI
     standard: idl_exports.Text
   }),
   maxLiquidityPerTick: idl_exports.Nat,
-  // Changed back to IDL.Nat
   nextPositionId: idl_exports.Nat
-  // Changed back to IDL.Nat
 })))];
 var src_default = class {
   constructor() {
@@ -63650,6 +63647,7 @@ var src_default = class {
   async getICPCKUSDCPoolMetadata() {
     try {
       const metadata = await fetchPoolMetadata();
+      console.log(metadata);
       return [metadata];
     } catch (error2) {
       console.error("Error fetching pool metadata:", error2);
@@ -63682,7 +63680,7 @@ async function fetchMyckUSDCBalance() {
   const accountData = {
     owner: myPrincipal
   };
-  const result2 = await call(CKUSDC_LEDGER_CANISTER_ID, "icrc1_balance_of", {
+  const result2 = await call(LOCAL_CKUSDC_CANISTER_ID, "icrc1_balance_of", {
     args: [accountData],
     paramIdlTypes: [ParamIcrc1BalanceOf],
     returnIdlType: idl_exports.Nat
@@ -63720,6 +63718,7 @@ async function fetchPoolMetadata() {
     })
   });
   if ("ok" in result2) {
+    console.log(result2.ok);
     return result2.ok;
   } else {
     throw new Error(`Failed to fetch metadata: ${JSON.stringify(result2.err)}`);
