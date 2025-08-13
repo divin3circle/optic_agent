@@ -17,7 +17,7 @@ This canister also provides a function to check the available fees earned by the
 🔂`balance` gets the amount of ckUSDC to swap to ICP to get a balanced USD value ratio
 🔂`getICPUSDValue` gets current ICP value in USD
 🔂`addLiquidity` adds liquidity to the ICP/ckUSDC pool
-🔂`get
+🔂`getPositionById` gets the canister's position details from the ICP/ckUSDC pool
 
 
 ## Local SetUp
