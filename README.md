@@ -4,7 +4,7 @@ A Typescript Agent for the Optic Platform.
 
 ## Workflow
 
-It's assumed, at least for now that only ckUSDC tokens are sent to these canister. After receiving enough ckUSDC based on the set thresh-hold, the agent will run two operations. A swap action to swap half of the available ckUSDC value to either ICP or ckBTC, followed by a add liquidity action to provide liquidity to the relevant pool. These actions are provided by ICPSwap [here](https://github.com/ICPSwap-Labs/docs).
+It's assumed, at least for now that only ckUSDC tokens are sent to these canister. After receiving enough ckUSDC based on the set thresh-hold, the agent will run two operations. A swap action to swap half of the available ckUSDC value to either ICP or ckBTC, followed by a add liquidity action to provide liquidity to the relevant pool. These trade actions are provided by ICPSwap [here](https://github.com/ICPSwap-Labs/docs).
 
 All swap, add liquidity actions are recorded into the canister's satble memory for auditing and performance analysis. This is true also for all the error messages encountered during swap or add liquidity actions.
 
@@ -20,6 +20,10 @@ This canister also provides a function to check the available fees earned by the
 - 🔂`addLiquidity` adds liquidity to the ICP/ckUSDC pool
 - 🔂`getPositionById` gets the canister's position details from the ICP/ckUSDC pool
 
+## State
+
+- Collected Fees - records of fee collection actions made by self canister
+- Withdrawals - records of all fees withdrawals made by Optic backend canister to a user.
 
 ## Local SetUp
 
@@ -33,3 +37,8 @@ Follow the guide [here](https://internetcomputer.org/docs/defi/token-ledgers/set
 Alternatively clone, and deploy [this](https://github.com/divin3circle/local_ckUSDC_ledger) ready configured demo ckUSDC canister. 
 `NOTE: Remember to edit the init_args in the dfx.json file`
 
+3. Deploy Optic agent canister
+
+```bash
+dfx deploy #at the root of the optic_agent directory
+```
