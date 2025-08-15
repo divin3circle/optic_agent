@@ -63579,8 +63579,8 @@ var A2 = BigInt(1e4);
 var Ie = BigInt(1e8);
 
 // src/utils/agent.ts
+var CKUSDC_LEDGER_CANISTER_ID = "xevnm-gaaaa-aaaar-qafnq-cai";
 var ICP_LEDGER_CANISTER_ID = "ryjl3-tyaaa-aaaaa-aaaba-cai";
-var LOCAL_CKUSDC_CANISTER_ID = "u6s2n-gx777-77774-qaaba-cai";
 var ICP_CKUSDC_POOL_CANISTER_ID = "mohjv-bqaaa-aaaag-qjyia-cai";
 
 // src/types/index.ts
@@ -63596,6 +63596,17 @@ var ParamIcrc1BalanceOf = idl_exports.Record({
 var OpticAccount = idl_exports.Record({
   icpBalance: idl_exports.Nat64,
   ckUSDCBalance: idl_exports.Nat64
+});
+var Withdrawals = idl_exports.Record({
+  amount0: idl_exports.Nat64,
+  amount1: idl_exports.Nat64,
+  to: idl_exports.Principal,
+  timestamp: idl_exports.Nat64
+});
+var CollectedFees = idl_exports.Record({
+  amount0: idl_exports.Nat64,
+  amount1: idl_exports.Nat64,
+  timestamp: idl_exports.Nat64
 });
 
 // src/index.ts
@@ -63680,7 +63691,7 @@ async function fetchMyckUSDCBalance() {
   const accountData = {
     owner: myPrincipal
   };
-  const result2 = await call(LOCAL_CKUSDC_CANISTER_ID, "icrc1_balance_of", {
+  const result2 = await call(CKUSDC_LEDGER_CANISTER_ID, "icrc1_balance_of", {
     args: [accountData],
     paramIdlTypes: [ParamIcrc1BalanceOf],
     returnIdlType: idl_exports.Nat
