@@ -1,6 +1,10 @@
 service: () -> {
     getBalance: () -> (opt record {icpBalance:nat64; ckUSDCBalance:nat64});
+    getCycleBalance: () -> (nat) query;
     getICPCKUSDCPoolMetadata: () -> (opt record {fee:nat; key:text; sqrtPriceX96:nat; tick:int; liquidity:nat; token0:record {address:text; standard:text}; token1:record {address:text; standard:text}; maxLiquidityPerTick:nat; nextPositionId:nat});
+    getLiquidityActions: () -> (vec record {positionId:nat64; amount0:nat64; amount1:nat64; timestamp:nat64; poolId:text}) query;
     getSelfAccountIdentifier: () -> (text) query;
     getSelfPrincipal: () -> (text) query;
+    getSwapActions: () -> (vec record {fee:nat64; amount0:nat64; amount1:nat64; timestamp:nat64; txHash:text}) query;
+    getThresholdAndEstimatedTimeToThreshold: () -> (record {estimatedTimeToThreshold:nat; thresholdCkUSDCBalance:nat});
 }

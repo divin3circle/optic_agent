@@ -70,6 +70,7 @@ var __decorateElement = (array, flags, name, decorators, target, extra) => {
   }
   return k4 || __decoratorMetadata(array, target), desc && __defProp(target, name, desc), p3 ? k4 ^ 4 ? extra : desc : target;
 };
+var __publicField = (obj, key, value3) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value3);
 var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
 var __privateIn = (member, obj) => Object(obj) !== obj ? __typeError('Cannot use the "in" operator on this value') : member.has(obj);
 var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
@@ -36774,6 +36775,17 @@ function createRejectCallback(globalRejectId, reject) {
   });
 }
 
+// node_modules/azle/src/stable/lib/ic_apis/canister_cycle_balance.ts
+function canisterCycleBalance() {
+  if (globalThis._azleIcExperimental !== void 0) {
+    return BigInt(globalThis._azleIcExperimental.canisterCycleBalance());
+  }
+  if (globalThis._azleIc !== void 0) {
+    return globalThis._azleIc.canisterCycleBalance();
+  }
+  return 0n;
+}
+
 // node_modules/azle/src/stable/lib/ic_apis/trap.ts
 function trap(message) {
   if (globalThis._azleIcExperimental !== void 0) {
@@ -36801,6 +36813,17 @@ ${error2.stack}`);
     const error2 = new Error(rawError);
     trap(`Uncaught: ${error2.message}
 ${error2.stack}`);
+  }
+}
+function validateUnsignedInteger(errorPrefix, size, number2) {
+  if (number2 < 0) {
+    throw new Error(`${errorPrefix} cannot be negative`);
+  }
+  const maxUnsignedInteger = Math.pow(2, size) - 1;
+  if (number2 > maxUnsignedInteger) {
+    throw new Error(
+      `${errorPrefix} cannot be greater than ${maxUnsignedInteger} (2^${size} - 1)`
+    );
   }
 }
 
@@ -63220,6 +63243,330 @@ function update2(param1, param2, param3) {
   return decoratorArgumentsHandler("update", param1, param2, param3);
 }
 
+// node_modules/azle/src/stable/lib/stable_structures/stable_b_tree_map.ts
+var StableBTreeMap2 = class {
+  memoryId;
+  keySerializable;
+  valueSerializable;
+  constructor(memoryId, keySerializable = stableJson, valueSerializable = stableJson) {
+    if (memoryId < 0) {
+      throw new Error("StableBTreeMap memoryId cannot be negative");
+    }
+    if (memoryId > 253) {
+      throw new Error(
+        "StableBTreeMap memoryId cannot be greater than 253 (memoryId 254 and 255 are reserved by Azle and ic-stable-structures respectively"
+      );
+    }
+    this.memoryId = memoryId;
+    this.keySerializable = keySerializable;
+    this.valueSerializable = valueSerializable;
+    if (globalThis._azleNodejsWasmEnvironment !== true) {
+      if (globalThis._azleIcExperimental !== void 0) {
+        globalThis._azleIcExperimental.stableBTreeMapInit(
+          memoryId.toString()
+        );
+      }
+      if (globalThis._azleIc !== void 0) {
+        globalThis._azleIc.stableBTreeMapInit(memoryId);
+      }
+    }
+  }
+  /**
+   * Checks if the given key exists in the map.
+   *
+   * @param key - The key to check
+   * @returns `true` if the key exists in the map, `false` otherwise
+   */
+  containsKey(key) {
+    if (globalThis._azleIc === void 0 && globalThis._azleIcExperimental === void 0) {
+      return void 0;
+    }
+    const encodedKey = this.keySerializable.toBytes(key);
+    if (globalThis._azleIcExperimental !== void 0) {
+      return globalThis._azleIcExperimental.stableBTreeMapContainsKey(
+        this.memoryId.toString(),
+        encodedKey.buffer instanceof ArrayBuffer ? encodedKey.buffer : new Uint8Array(encodedKey).buffer
+      );
+    }
+    if (globalThis._azleIc !== void 0) {
+      return globalThis._azleIc.stableBTreeMapContainsKey(
+        this.memoryId,
+        encodedKey
+      );
+    }
+    throw new Error(
+      "Neither globalThis._azleIc nor globalThis._azleIcExperimental are defined"
+    );
+  }
+  /**
+   * Retrieves the value stored at the provided key if it exists.
+   *
+   * @param key - The key whose value will be retrieved
+   * @returns The value associated with the key, or undefined if the key doesn't exist
+   */
+  get(key) {
+    if (globalThis._azleIc === void 0 && globalThis._azleIcExperimental === void 0) {
+      return void 0;
+    }
+    const encodedKey = this.keySerializable.toBytes(key);
+    const encodedResult = globalThis._azleIcExperimental !== void 0 ? globalThis._azleIcExperimental.stableBTreeMapGet(
+      this.memoryId.toString(),
+      encodedKey.buffer instanceof ArrayBuffer ? encodedKey.buffer : new Uint8Array(encodedKey).buffer
+    ) : globalThis._azleIc !== void 0 ? globalThis._azleIc.stableBTreeMapGet(
+      this.memoryId,
+      encodedKey
+    ) : (() => {
+      throw new Error(
+        "Neither globalThis._azleIc nor globalThis._azleIcExperimental are defined"
+      );
+    })();
+    if (encodedResult === void 0) {
+      return encodedResult;
+    } else {
+      return this.valueSerializable.fromBytes(
+        encodedResult instanceof Uint8Array ? encodedResult : new Uint8Array(encodedResult)
+      );
+    }
+  }
+  /**
+   * Inserts a value into the map at the provided key.
+   * If the key already exists, its value is updated.
+   *
+   * @param key - The key at which to store the value
+   * @param value - The value to store
+   *
+   * @returns The previous value at the key if it existed, undefined otherwise
+   */
+  insert(key, value3) {
+    if (globalThis._azleIc === void 0 && globalThis._azleIcExperimental === void 0) {
+      return void 0;
+    }
+    const encodedKey = this.keySerializable.toBytes(key);
+    const encodedValue = this.valueSerializable.toBytes(value3);
+    const encodedResult = globalThis._azleIcExperimental !== void 0 ? globalThis._azleIcExperimental.stableBTreeMapInsert(
+      this.memoryId.toString(),
+      encodedKey.buffer instanceof ArrayBuffer ? encodedKey.buffer : new Uint8Array(encodedKey).buffer,
+      encodedValue.buffer instanceof ArrayBuffer ? encodedValue.buffer : new Uint8Array(encodedValue).buffer
+    ) : globalThis._azleIc !== void 0 ? globalThis._azleIc.stableBTreeMapInsert(
+      this.memoryId,
+      encodedKey,
+      encodedValue
+    ) : (() => {
+      throw new Error(
+        "Neither globalThis._azleIc nor globalThis._azleIcExperimental are defined"
+      );
+    })();
+    if (encodedResult === void 0) {
+      return encodedResult;
+    } else {
+      return this.valueSerializable.fromBytes(
+        encodedResult instanceof Uint8Array ? encodedResult : new Uint8Array(encodedResult)
+      );
+    }
+  }
+  /**
+   * Checks if the map is empty.
+   *
+   * @returns `true` if the map contains no elements, `false` otherwise
+   */
+  isEmpty() {
+    if (globalThis._azleIc === void 0 && globalThis._azleIcExperimental === void 0) {
+      return void 0;
+    }
+    if (globalThis._azleIcExperimental !== void 0) {
+      return globalThis._azleIcExperimental.stableBTreeMapIsEmpty(
+        this.memoryId.toString()
+      );
+    }
+    if (globalThis._azleIc !== void 0) {
+      return globalThis._azleIc.stableBTreeMapIsEmpty(this.memoryId);
+    }
+    throw new Error(
+      "Neither globalThis._azleIc nor globalThis._azleIcExperimental are defined"
+    );
+  }
+  /**
+   * Retrieves the items in the map in byte-level (not based on the JavaScript runtime value) sorted order by key.
+   *
+   * @param startIndex - Optional index at which to start retrieving items (inclusive). Represented as a u32 (max size 2^32 - 1)
+   * @param length - Optional maximum number of items to retrieve. Represented as a u32 (max size 2^32 - 1)
+   *
+   * @returns Array of key-value pair tuples, in byte-level (not based on the JavaScript runtime value) sorted order by key
+   */
+  items(startIndex, length) {
+    if (globalThis._azleIc === void 0 && globalThis._azleIcExperimental === void 0) {
+      return void 0;
+    }
+    if (startIndex !== void 0) {
+      validateUnsignedInteger(
+        "StableBTreeMap.items startIndex",
+        32,
+        startIndex
+      );
+    }
+    if (length !== void 0) {
+      validateUnsignedInteger("StableBTreeMap.items length", 32, length);
+    }
+    const encodedItems = globalThis._azleIcExperimental !== void 0 ? globalThis._azleIcExperimental.stableBTreeMapItems(
+      this.memoryId.toString(),
+      startIndex?.toString() ?? "0",
+      length?.toString() ?? "NOT_SET"
+    ) : globalThis._azleIc !== void 0 ? globalThis._azleIc.stableBTreeMapItems(
+      this.memoryId,
+      startIndex,
+      length
+    ) : (() => {
+      throw new Error(
+        "Neither globalThis._azleIc nor globalThis._azleIcExperimental are defined"
+      );
+    })();
+    return encodedItems.map(([encodedKey, encodedValue]) => {
+      return [
+        this.keySerializable.fromBytes(
+          encodedKey instanceof Uint8Array ? encodedKey : new Uint8Array(encodedKey)
+        ),
+        this.valueSerializable.fromBytes(
+          encodedValue instanceof Uint8Array ? encodedValue : new Uint8Array(encodedValue)
+        )
+      ];
+    });
+  }
+  /**
+   * Retrieves the keys in the map in byte-level (not based on the JavaScript runtime value) sorted order.
+   *
+   * @param startIndex - Optional index at which to start retrieving keys (inclusive). Represented as a u32 (max size 2^32 - 1)
+   * @param length - Optional maximum number of keys to retrieve. Represented as a u32 (max size 2^32 - 1)
+   *
+   * @returns Array of keys in byte-level (not based on the JavaScript runtime value) sorted order
+   */
+  keys(startIndex, length) {
+    if (globalThis._azleIc === void 0 && globalThis._azleIcExperimental === void 0) {
+      return void 0;
+    }
+    if (startIndex !== void 0) {
+      validateUnsignedInteger(
+        "StableBTreeMap.keys startIndex",
+        32,
+        startIndex
+      );
+    }
+    if (length !== void 0) {
+      validateUnsignedInteger("StableBTreeMap.keys length", 32, length);
+    }
+    const encodedKeys = globalThis._azleIcExperimental !== void 0 ? globalThis._azleIcExperimental.stableBTreeMapKeys(
+      this.memoryId.toString(),
+      startIndex?.toString() ?? "0",
+      length?.toString() ?? "NOT_SET"
+    ) : globalThis._azleIc !== void 0 ? globalThis._azleIc.stableBTreeMapKeys(
+      this.memoryId,
+      startIndex,
+      length
+    ) : (() => {
+      throw new Error(
+        "Neither globalThis._azleIc nor globalThis._azleIcExperimental are defined"
+      );
+    })();
+    return encodedKeys.map((encodedKey) => {
+      return this.keySerializable.fromBytes(
+        encodedKey instanceof Uint8Array ? encodedKey : new Uint8Array(encodedKey)
+      );
+    });
+  }
+  /**
+   * Returns the number of key-value pairs in the map.
+   *
+   * @returns The number of key-value pairs in the map. Represented as a u32 (max size 2^32 - 1)
+   */
+  len() {
+    if (globalThis._azleIc === void 0 && globalThis._azleIcExperimental === void 0) {
+      return void 0;
+    }
+    if (globalThis._azleIcExperimental !== void 0) {
+      return Number(
+        globalThis._azleIcExperimental.stableBTreeMapLen(
+          this.memoryId.toString()
+        )
+      );
+    }
+    if (globalThis._azleIc !== void 0) {
+      return globalThis._azleIc.stableBTreeMapLen(this.memoryId);
+    }
+    throw new Error(
+      "Neither globalThis._azleIc nor globalThis._azleIcExperimental are defined"
+    );
+  }
+  /**
+   * Removes a key and its associated value from the map.
+   *
+   * @param key - The key to remove
+   * @returns The value that was associated with the key, or undefined if the key didn't exist
+   */
+  remove(key) {
+    if (globalThis._azleIc === void 0 && globalThis._azleIcExperimental === void 0) {
+      return void 0;
+    }
+    const encodedKey = this.keySerializable.toBytes(key);
+    const encodedValue = globalThis._azleIcExperimental !== void 0 ? globalThis._azleIcExperimental.stableBTreeMapRemove(
+      this.memoryId.toString(),
+      encodedKey.buffer instanceof ArrayBuffer ? encodedKey.buffer : new Uint8Array(encodedKey).buffer
+    ) : globalThis._azleIc !== void 0 ? globalThis._azleIc.stableBTreeMapRemove(
+      this.memoryId,
+      encodedKey
+    ) : (() => {
+      throw new Error(
+        "Neither globalThis._azleIc nor globalThis._azleIcExperimental are defined"
+      );
+    })();
+    if (encodedValue === void 0) {
+      return void 0;
+    } else {
+      return this.valueSerializable.fromBytes(
+        encodedValue instanceof Uint8Array ? encodedValue : new Uint8Array(encodedValue)
+      );
+    }
+  }
+  /**
+   * Retrieves the values in the map in byte-level (not based on the JavaScript runtime value) sorted order by key.
+   *
+   * @param startIndex - Optional index at which to start retrieving values (inclusive). Represented as a u32 (max size 2^32 - 1)
+   * @param length - Optional maximum number of values to retrieve. Represented as a u32 (max size 2^32 - 1)
+   * @returns Array of values, in byte-level (not based on the JavaScript runtime value) sorted order by key
+   */
+  values(startIndex, length) {
+    if (globalThis._azleIc === void 0 && globalThis._azleIcExperimental === void 0) {
+      return void 0;
+    }
+    if (startIndex !== void 0) {
+      validateUnsignedInteger(
+        "StableBTreeMap.values startIndex",
+        32,
+        startIndex
+      );
+    }
+    if (length !== void 0) {
+      validateUnsignedInteger("StableBTreeMap.values length", 32, length);
+    }
+    const encodedValues = globalThis._azleIcExperimental !== void 0 ? globalThis._azleIcExperimental.stableBTreeMapValues(
+      this.memoryId.toString(),
+      startIndex?.toString() ?? "0",
+      length?.toString() ?? "NOT_SET"
+    ) : globalThis._azleIc !== void 0 ? globalThis._azleIc.stableBTreeMapValues(
+      this.memoryId,
+      startIndex,
+      length
+    ) : (() => {
+      throw new Error(
+        "Neither globalThis._azleIc nor globalThis._azleIcExperimental are defined"
+      );
+    })();
+    return encodedValues.map((encodedValue) => {
+      return this.valueSerializable.fromBytes(
+        encodedValue instanceof Uint8Array ? encodedValue : new Uint8Array(encodedValue)
+      );
+    });
+  }
+};
+
 // node_modules/azle/src/stable/lib/index.ts
 init_esm2();
 init_esm();
@@ -63608,10 +63955,34 @@ var CollectedFees = idl_exports.Record({
   amount1: idl_exports.Nat64,
   timestamp: idl_exports.Nat64
 });
+var SwapAction = idl_exports.Record({
+  amount0: idl_exports.Nat64,
+  amount1: idl_exports.Nat64,
+  timestamp: idl_exports.Nat64,
+  fee: idl_exports.Nat64,
+  txHash: idl_exports.Text
+});
+var LiquidityAction = idl_exports.Record({
+  amount0: idl_exports.Nat64,
+  amount1: idl_exports.Nat64,
+  timestamp: idl_exports.Nat64,
+  positionId: idl_exports.Nat64,
+  poolId: idl_exports.Text
+});
+
+// src/state/index.ts
+var withdrawals = new StableBTreeMap2(0);
+var collectedFees = new StableBTreeMap2(0);
+var swapActions = new StableBTreeMap2(0);
+var liquidityActions = new StableBTreeMap2(0);
 
 // src/index.ts
-var _getICPCKUSDCPoolMetadata_dec, _getSelfPrincipal_dec, _getSelfAccountIdentifier_dec, _getBalance_dec, _init;
-_getBalance_dec = [update2([], idl_exports.Opt(OpticAccount))], _getSelfAccountIdentifier_dec = [query2([], idl_exports.Text)], _getSelfPrincipal_dec = [query2([], idl_exports.Text)], _getICPCKUSDCPoolMetadata_dec = [update2([], idl_exports.Opt(idl_exports.Record({
+var devMode = false;
+var _getICPCKUSDCPoolMetadata_dec, _getSelfPrincipal_dec, _getSelfAccountIdentifier_dec, _getBalance_dec, _getSwapActions_dec, _getLiquidityActions_dec, _getThresholdAndEstimatedTimeToThreshold_dec, _getCycleBalance_dec, _init;
+_getCycleBalance_dec = [query2([], idl_exports.Nat)], _getThresholdAndEstimatedTimeToThreshold_dec = [update2([], idl_exports.Record({
+  thresholdCkUSDCBalance: idl_exports.Nat,
+  estimatedTimeToThreshold: idl_exports.Nat
+}))], _getLiquidityActions_dec = [query2([], idl_exports.Vec(LiquidityAction))], _getSwapActions_dec = [query2([], idl_exports.Vec(SwapAction))], _getBalance_dec = [update2([], idl_exports.Opt(OpticAccount))], _getSelfAccountIdentifier_dec = [query2([], idl_exports.Text)], _getSelfPrincipal_dec = [query2([], idl_exports.Text)], _getICPCKUSDCPoolMetadata_dec = [update2([], idl_exports.Opt(idl_exports.Record({
   fee: idl_exports.Nat,
   key: idl_exports.Text,
   sqrtPriceX96: idl_exports.Nat,
@@ -63631,6 +64002,32 @@ _getBalance_dec = [update2([], idl_exports.Opt(OpticAccount))], _getSelfAccountI
 var src_default = class {
   constructor() {
     __runInitializers(_init, 5, this);
+    __publicField(this, "thresholdCkUSDCBalance", 100000000n);
+  }
+  async getEstimatedTimeToThreshold() {
+    const averageContributionPerDay = await this.getAverageContributionPerDayLast10Days();
+    const daysToThreshold = this.thresholdCkUSDCBalance / averageContributionPerDay;
+    return Number(daysToThreshold);
+  }
+  async getAverageContributionPerDayLast10Days() {
+    const ckUSDCBalance = await fetchMyckUSDCBalance();
+    const averageContributionPerDay = ckUSDCBalance / 10n;
+    return averageContributionPerDay;
+  }
+  getCycleBalance() {
+    return canisterCycleBalance();
+  }
+  async getThresholdAndEstimatedTimeToThreshold() {
+    return {
+      thresholdCkUSDCBalance: this.thresholdCkUSDCBalance,
+      estimatedTimeToThreshold: await this.getEstimatedTimeToThreshold()
+    };
+  }
+  getLiquidityActions() {
+    return Array.from(liquidityActions.values() || []);
+  }
+  getSwapActions() {
+    return Array.from(swapActions.values() || []);
   }
   async getBalance() {
     try {
@@ -63667,6 +64064,10 @@ var src_default = class {
   }
 };
 _init = __decoratorStart(null);
+__decorateElement(_init, 1, "getCycleBalance", _getCycleBalance_dec, src_default);
+__decorateElement(_init, 1, "getThresholdAndEstimatedTimeToThreshold", _getThresholdAndEstimatedTimeToThreshold_dec, src_default);
+__decorateElement(_init, 1, "getLiquidityActions", _getLiquidityActions_dec, src_default);
+__decorateElement(_init, 1, "getSwapActions", _getSwapActions_dec, src_default);
 __decorateElement(_init, 1, "getBalance", _getBalance_dec, src_default);
 __decorateElement(_init, 1, "getSelfAccountIdentifier", _getSelfAccountIdentifier_dec, src_default);
 __decorateElement(_init, 1, "getSelfPrincipal", _getSelfPrincipal_dec, src_default);
@@ -63687,6 +64088,9 @@ async function fetchMyICPBalance() {
   return result2.e8s;
 }
 async function fetchMyckUSDCBalance() {
+  if (devMode) {
+    return 10000000n;
+  }
   const myPrincipal = canisterSelf();
   const accountData = {
     owner: myPrincipal
@@ -63699,6 +64103,25 @@ async function fetchMyckUSDCBalance() {
   return result2;
 }
 async function fetchPoolMetadata() {
+  if (devMode) {
+    return {
+      fee: 1000000000000000000n,
+      key: "test",
+      sqrtPriceX96: 1000000000000000000n,
+      tick: 0n,
+      liquidity: 1000000000000000000n,
+      token0: {
+        address: "test",
+        standard: "test"
+      },
+      token1: {
+        address: "test",
+        standard: "test"
+      },
+      maxLiquidityPerTick: 1000000000000000000n,
+      nextPositionId: 0n
+    };
+  }
   const result2 = await call(ICP_CKUSDC_POOL_CANISTER_ID, "metadata", {
     args: [],
     paramIdlTypes: [],

@@ -1,11 +1,58 @@
 import { AccountIdentifier } from '@dfinity/ledger-icp';
-import { call, canisterSelf, IDL, query, update } from 'azle';
+import { call, canisterSelf, canisterCycleBalance, IDL, query, update } from 'azle';
 import { LOCAL_CKUSDC_CANISTER_ID, ICP_LEDGER_CANISTER_ID, CKUSDC_LEDGER_CANISTER_ID, ICP_CKUSDC_POOL_CANISTER_ID } from './utils/agent';
-import { OpticAccount, ParamAccountIdentifier, ReturnICPBalance, ParamIcrc1BalanceOf } from './types';
+import { OpticAccount, ParamAccountIdentifier, ReturnICPBalance, ParamIcrc1BalanceOf, SwapAction, LiquidityAction } from './types';
 import { PoolMetadata } from './interfaces/icp_ckusdc_pool';
+import { liquidityActions, swapActions } from './state';
+
+const devMode = false;
 
 
 export default class {
+  thresholdCkUSDCBalance: bigint = 100_000_000n;
+
+  async getEstimatedTimeToThreshold(): Promise<number> {
+   const averageContributionPerDay = await this.getAverageContributionPerDayLast10Days();
+   const daysToThreshold = this.thresholdCkUSDCBalance / averageContributionPerDay;
+   return Number(daysToThreshold);
+  }
+
+  async getAverageContributionPerDayLast10Days(): Promise<bigint> {
+    const ckUSDCBalance = await fetchMyckUSDCBalance();
+    const averageContributionPerDay = ckUSDCBalance / 10n;
+    return averageContributionPerDay;
+  }
+
+  @query([], IDL.Nat)
+  getCycleBalance(): bigint {
+    return canisterCycleBalance();
+  }
+
+  @update([], IDL.Record({
+    thresholdCkUSDCBalance: IDL.Nat,
+    estimatedTimeToThreshold: IDL.Nat
+  }))
+  async getThresholdAndEstimatedTimeToThreshold(): Promise<{
+    thresholdCkUSDCBalance: bigint,
+    estimatedTimeToThreshold: number
+  }> {
+    return {
+      thresholdCkUSDCBalance: this.thresholdCkUSDCBalance,
+      estimatedTimeToThreshold: await this.getEstimatedTimeToThreshold()
+    }
+  }
+
+  @query([], IDL.Vec(LiquidityAction))
+  getLiquidityActions(): LiquidityAction[] {
+    return Array.from(liquidityActions.values() || []);
+  }
+
+
+  @query([], IDL.Vec(SwapAction))
+  getSwapActions(): SwapAction[] {
+    return Array.from(swapActions.values() || []);
+  }
+
   @update([], IDL.Opt(OpticAccount))
   async getBalance(): Promise<[OpticAccount] | []> {
     try {
@@ -85,6 +132,9 @@ async function fetchMyICPBalance(): Promise<bigint> {
 
 async function fetchMyckUSDCBalance(): Promise<bigint> {
   //icrc1_balance_of: (record {owner:principal; subaccount:opt vec nat8}) → (nat) query 
+  if(devMode){
+    return 10_000_000n;
+  }
   const myPrincipal = canisterSelf();
   const accountData = {
     owner: myPrincipal,
@@ -99,6 +149,25 @@ async function fetchMyckUSDCBalance(): Promise<bigint> {
 
 
 export async function fetchPoolMetadata(): Promise<PoolMetadata> {
+  if(devMode){
+    return {
+      fee: 1000000000000000000n,
+      key: 'test',
+      sqrtPriceX96: 1000000000000000000n,
+      tick: 0n,
+      liquidity: 1000000000000000000n,
+      token0: {
+        address: 'test',
+        standard: 'test'
+      },
+      token1: {
+        address: 'test',
+        standard: 'test'
+      },
+      maxLiquidityPerTick: 1000000000000000000n,
+      nextPositionId: 0n,
+    }
+  }
   const result = await call(ICP_CKUSDC_POOL_CANISTER_ID, 'metadata', {
     args: [],
     paramIdlTypes: [],

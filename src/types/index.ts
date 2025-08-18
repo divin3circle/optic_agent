@@ -51,3 +51,35 @@ export type CollectedFees = {
     amount1: bigint;
     timestamp: bigint;
 }
+
+export const SwapAction = IDL.Record({
+    amount0: IDL.Nat64,
+    amount1: IDL.Nat64,
+    timestamp: IDL.Nat64,
+    fee: IDL.Nat64,
+    txHash: IDL.Text,
+})
+
+export type SwapAction = {
+    amount0: bigint;
+    amount1: bigint;
+    timestamp: bigint;
+    fee: bigint;
+    txHash: string;
+}
+
+export const LiquidityAction = IDL.Record({
+    amount0: IDL.Nat64,
+    amount1: IDL.Nat64,
+    timestamp: IDL.Nat64,
+    positionId: IDL.Nat64,
+    poolId: IDL.Text,
+})
+
+export type LiquidityAction = {
+    amount0: bigint;
+    amount1: bigint;
+    timestamp: bigint;
+    positionId: bigint;
+    poolId: string;
+}
